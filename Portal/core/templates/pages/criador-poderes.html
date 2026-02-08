@@ -1,0 +1,22 @@
+{% extends "pages/base.html" %} {% block title %}Criador de Poderes | Synergia{% endblock %}
+
+{% block content %}
+    <div id="app">
+        <h1>Criador de Poderes</h1>
+        <p>Bem-vindo ao sistema de criação.</p>
+
+        <input type="text" v-model="nomePoder" placeholder="Nome do poder">
+        <p>Poder: {{ nomePoder }}</p>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const App = {
+        data() {
+            return { nomePoder: '' }
+        }
+    }
+    Vue.createApp(App).mount('#app')
+</script>
+{% endblock %}

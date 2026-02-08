@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://unpkg.com/vue@3"> </script>
+</head>
+<body>
+    <div id ="app">
+    <!-- Vue foi inicializado sob o nome 'app', então ele só enxerga e
+    trabalha com o que estiver dentro desse <div id ="app">  AQUI  </>div>   -->
+    <p>
+        <input type="text" v-model="hello">
+    </p>
+        <p>
+    {{hello}} ( {{hello.length}} )
+    </p>
+    </div>
+    <script>
+        Vue.createApp({
+
+            data(){
+                return{
+                hello: "Olá Usuário"
+                }
+            },
+
+            mounted() {
+<!--  a função mounted "fires", ou seja, ativa, quando a página é carregado ou recarregada-->
+                alert('ALERTA');
+            }
+
+        }).mount('#app');
+    </script>
+
+</body>
+</html>
