@@ -26,6 +26,7 @@ Elementari_System/
 │   ├── manage.py              # Django Entry Point
 │   ├── rpg_system/            # Web App Logic
 │   └── templates/             # Vue.js + Bootstrap Interfaces
+```
 ⚙️ Core Mechanics (The Engine)
 The heart of the system is the synergia_rules library, which handles:
 
