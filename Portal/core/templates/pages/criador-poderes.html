@@ -1,13 +1,13 @@
-{% extends "pages/base.html" %} {% block title %}Criador de Poderes | Synergia{% endblock %}
+{% extends "pages/base.html" %} {% block title %}Power Creator | Synergia{% endblock %}
 
 {% block content %}
-    <div id="app">
-        <h1>Criador de Poderes</h1>
-        <p>Bem-vindo ao sistema de criação.</p>
+<div id="app">
+    <h1>Power Creator</h1>
+    <p>Welcome to the creation system.</p>
 
-        <input type="text" v-model="nomePoder" placeholder="Nome do poder">
-        <p>Poder: {{ nomePoder }}</p>
-    </div>
+    <input type="text" v-model="nomePoder" placeholder="Power name">
+    <p>Power: {{ nomePoder }}</p>
+</div>
 {% endblock %}
 
 {% block extra_js %}

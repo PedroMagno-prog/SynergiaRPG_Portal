@@ -4,32 +4,32 @@ import math
 
 class DiceEngine:
     """
-    Motor genérico de rolagens de dados.
-    Centraliza a aleatoriedade do sistema.
-    Baseado no seu antigo 'dice_roller.py'.
+    Generic dice rolling engine.
+    Centralizes the system's randomness.
+    Based on your old 'dice_roller.py'.
     """
 
     @staticmethod
     def roll_XdY(qtd_dados, lados):
-        """Rola X dados de Y lados e retorna a lista de resultados."""
+        """Rolls X dice with Y sides and returns the list of results."""
         return [random.randint(1, lados) for _ in range(qtd_dados)]
 
     @staticmethod
     def roll_XdY_drop_lowest(qtd_dados, lados, drop_n=1):
-        """Rola X dados, remove os N menores."""
+        """Rolls X dice, drops the N lowest."""
         rolls = sorted(DiceEngine.roll_XdY(qtd_dados, lados))
         return rolls[drop_n:]
 
     @staticmethod
     def roll_XdY_explode(qtd_dados, lados, threshold):
-        """Rola X dados, explodindo resultados >= threshold."""
+        """Rolls X dice, exploding results >= threshold."""
         results = DiceEngine.roll_XdY(qtd_dados, lados)
         final_sum = sum(results)
 
-        # Lógica recursiva de explosão (simplificada para soma)
+        # Recursive explosion logic (simplified for sum)
         if results and results[0] >= threshold:
-            # Nota: A lógica original explodia apenas o primeiro dado ou todos?
-            # Assumindo comportamento recursivo padrão de explosão
+            # Note: Did the original logic explode only the first die or all?
+            # Assuming standard recursive explosion behavior
             final_sum += DiceEngine.roll_XdY_explode(qtd_dados, lados, threshold)
 
         return final_sum
@@ -37,34 +37,34 @@ class DiceEngine:
 
 class CombatMechanics:
     """
-    Regras específicas de combate do Synergia RPG.
-    Baseado no 'simulador_rolagem1.5.py'.
+    Specific combat rules for Synergia RPG.
+    Based on 'simulador_rolagem1.5.py'.
     """
 
-    ARMOR_TIERS = ['b', 'p', 'm', 's']  # Blindada, Pesada, Média, Sem
+    ARMOR_TIERS = ['b', 'p', 'm', 's']  # Armored (Blindada), Heavy (Pesada), Medium (Média), None (Sem)
 
     @staticmethod
     def degrade_armor(current_armor):
-        """Regra de degradação de armadura: b->p->m->s->s"""
+        """Armor degradation rule: b->p->m->s->s"""
         mapping = {'b': 'p', 'p': 'm', 'm': 's', 's': 's'}
         return mapping.get(current_armor, 's')
 
     @staticmethod
     def resolve_attack(num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule):
         """
-        Executa uma rodada de ataque completa e retorna um dicionário com os resultados.
-        Retorna dados estruturados, não texto formatado (melhor para Web e Análise).
+        Executes a full attack round and returns a dictionary with the results.
+        Returns structured data, not formatted text (better for Web and Analysis).
         """
         logs = []
         current_armor = armor_type
         current_adv = adv_state
 
-        # 1. Ajuste inicial de armadura
+        # 1. Initial armor adjustment
         if current_armor == 'b':
             current_adv -= 1
-            logs.append("Armadura 'b' aplicou Desvantagem.")
+            logs.append("Armor 'b' applied Disadvantage.")
 
-        # 2. Rolagem Primária
+        # 2. Primary Roll
         primary_rolls = []
         final_primary_val = 0
 
@@ -78,7 +78,7 @@ class CombatMechanics:
             primary_rolls = rolls
             final_primary_val = max(rolls) if current_adv > 0 else min(rolls)
 
-        # Checagem de Falha Crítica
+        # Critical Failure Check
         if final_primary_val == 1:
             return {
                 "damage": 0,
@@ -87,7 +87,7 @@ class CombatMechanics:
                 "rolls": primary_rolls
             }
 
-        # 3. Dano dos dados secundários
+        # 3. Secondary dice damage
         secondary_damage = 0
         secondary_rolls = []
         if num_dice > 1:
@@ -96,16 +96,16 @@ class CombatMechanics:
 
         total_dice_damage = final_primary_val + secondary_damage
 
-        # 4. Tratar Críticos
+        # 4. Handle Crits
         is_crit = (final_primary_val == die_sides)
         status = "Hit"
 
         if is_crit:
-            if crit_rule == 'e':  # Épico
-                status = "Crit (Épico)"
-                current_armor = 's'  # Ignora armadura
-            elif crit_rule == 't':  # Tático
-                status = "Crit (Tático)"
+            if crit_rule == 'e':  # Epic
+                status = "Crit (Epic)"
+                current_armor = 's'  # Ignores armor
+            elif crit_rule == 't':  # Tactical
+                status = "Crit (Tactical)"
                 current_armor = CombatMechanics.degrade_armor(current_armor)
 
             # Vicious
@@ -114,29 +114,29 @@ class CombatMechanics:
                 total_dice_damage += vicious_val
                 logs.append(f"Vicious +{vicious_val}")
 
-            # Explosão
+            # Explosion
             current_explode_val = final_primary_val
             while current_explode_val == die_sides:
                 explode_val = random.randint(1, die_sides)
                 total_dice_damage += explode_val
-                logs.append(f"Explosão +{explode_val}")
+                logs.append(f"Explosion +{explode_val}")
                 current_explode_val = explode_val
 
-                # Explosão degrada armadura no Tático
+                # Explosion degrades armor in Tactical
                 if crit_rule == 't' and current_explode_val == die_sides:
                     current_armor = CombatMechanics.degrade_armor(current_armor)
 
-        # 5. Cálculo Final com Redução de Dano
+        # 5. Final Calculation with Damage Reduction
         final_damage = total_dice_damage + bonus_damage
 
-        # Regras de Redução por Armadura
-        # b e p anulam bônus fixo? (Baseado no seu script original)
+        # Armor Reduction Rules
+        # b and p negate fixed bonus? (Based on your original script)
         if current_armor in ['p', 'b']:
-            final_damage -= bonus_damage  # Remove o bônus que foi somado antes
+            final_damage -= bonus_damage  # Removes the bonus that was added before
 
         if current_armor in ['m', 'p', 'b']:
             final_damage = math.floor(final_damage / 2)
-            logs.append(f"Dano reduzido pela metade (Armadura {current_armor})")
+            logs.append(f"Damage halved (Armor {current_armor})")
 
         return {
             "damage": final_damage,
@@ -152,17 +152,17 @@ class CombatMechanics:
 
 class PowerEconomy:
     """
-    Regras de construção e custo de poderes.
-    Baseado no 'balancete_magico.py'.
+    Power construction and cost rules.
+    Based on 'balancete_magico.py'.
     """
 
-    MAX_PC_BUDGET = 60  # Constante do sistema
+    MAX_PC_BUDGET = 60  # System constant
 
     @staticmethod
     def calculate_cost(qtd_dados, tipo_dado, alcance, area):
         """
-        Calcula o custo em Pontos de Criação (PC) de uma habilidade.
-        Fórmula: (X*Y)/2 + Alcance/2 + Área
+        Calculates the Creation Points (PC) cost of an ability.
+        Formula: (X*Y)/2 + Range/2 + Area
         """
         custo_dano = (qtd_dados * tipo_dado) / 2
         custo_alcance = math.ceil(alcance / 2)
@@ -180,5 +180,5 @@ class PowerEconomy:
 
     @staticmethod
     def estimate_avg_damage(qtd_dados, tipo_dado):
-        """Retorna a média estatística de dano (sem contar críticos/erros)."""
+        """Returns the statistical average damage (excluding crits/misses)."""
         return qtd_dados * ((tipo_dado + 1) / 2)

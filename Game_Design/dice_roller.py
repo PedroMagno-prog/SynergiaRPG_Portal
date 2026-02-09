@@ -1,27 +1,27 @@
 from random import randint
 
 """
-Muitas funções foram inspiradas no BOT do Discord rollem
+Many functions were inspired by the Discord bot rollem
 
-4d6 -- soma de 4 dados de 6 lados
-4#d6 -- 4 rolagens de 1d6
+4d6 -- sum of 4 6-sided dice
+4#d6 -- 4 rolls of 1d6
 
-4d6dl1 -- pega o menor e retira da soma
+4d6dl1 -- drop the lowest and sum the rest
 
-4d6dh1  -- pega o maior e retira da soma 
+4d6dh1  -- drop the highest and sum the rest
 
-6#4d6 -- 6 rolagens de 4d6
+6#4d6 -- 6 rolls of 4d6
 """
 
 """
-Simula a rolagem de 'x' dados de 'y' lados.
+Simulates rolling 'x' dice with 'y' sides.
 
 Args:
-    x (int): número de dados a serem rolados.
-    y (int): número de lados de cada dado.
+    x (int): number of dice to be rolled.
+    y (int): number of sides of each die.
 
 Returns:
-    list: Uma lista de inteiros com os resultados de cada dado.
+    list: A list of integers with the results of each die.
 """
 
 def roll_XdY(x, y):

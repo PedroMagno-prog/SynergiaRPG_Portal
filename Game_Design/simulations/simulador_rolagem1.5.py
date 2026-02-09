@@ -3,7 +3,7 @@ import math
 import time
 import csv
 
-# Tenta importar 'rich'. Se falhar, avisa o usuário.
+# Tries to import 'rich'. If it fails, warns the user.
 try:
     from rich.console import Console
     from rich.panel import Panel
@@ -11,19 +11,19 @@ try:
     from rich.prompt import Prompt
     from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
 except ImportError:
-    print("ERRO: A biblioteca 'rich' não foi encontrada.")
-    print("Por favor, instale-a usando: pip install rich")
+    print("ERROR: The 'rich' library was not found.")
+    print("Please install it using: pip install rich")
     exit()
 
-# --- CONSTANTES ---
-DICE_TYPES = [4, 6, 8, 10, 12]  # Tipos de dado padrão
-N_SIMULATIONS_AVULSO = 300000  # Simulações para teste rápido
-N_SIMULATIONS_CENARIO = 100000  # Simulações por célula no cenário (mais rápido)
-EXIT_KEYWORD = 'voltar'  # Palavra-chave para retornar ao menu principal
+# --- CONSTANTS ---
+DICE_TYPES = [4, 6, 8, 10, 12]  # Standard die types
+N_SIMULATIONS_SINGLE = 300000  # Simulations for quick test
+N_SIMULATIONS_SCENARIO = 100000  # Simulations per cell in scenario (faster)
+EXIT_KEYWORD = 'back'  # Keyword to return to main menu
 
 
-# --- FUNÇÕES DE SIMULAÇÃO (O "MOTOR") ---
-# (Estas funções são as mesmas de antes, sem mudanças)
+# --- SIMULATION FUNCTIONS (THE "ENGINE") ---
+# (These functions are the same as before, no changes)
 
 def degrade_armor(armor_type):
     if armor_type == 'b': return 'p'
@@ -37,17 +37,17 @@ def roll_primary_die(die_sides, adv_state):
     roll_list = []
     if adv_state == 0:
         roll = random.randint(1, die_sides)
-        return roll, f"Primário: [{roll}]"
+        return roll, f"Primary: [{roll}]"
     elif adv_state > 0:
         num_rolls = adv_state + 1
         roll_list = [random.randint(1, die_sides) for _ in range(num_rolls)]
         result = max(roll_list)
-        return result, f"Primário (Vantagem {num_rolls}d{die_sides}): {roll_list} -> [{result}]"
+        return result, f"Primary (Advantage {num_rolls}d{die_sides}): {roll_list} -> [{result}]"
     elif adv_state < 0:
         num_rolls = abs(adv_state) + 1
         roll_list = [random.randint(1, die_sides) for _ in range(num_rolls)]
         result = min(roll_list)
-        return result, f"Primário (Desvantagem {num_rolls}d{die_sides}): {roll_list} -> [{result}]"
+        return result, f"Primary (Disadvantage {num_rolls}d{die_sides}): {roll_list} -> [{result}]"
 
 
 def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule):
@@ -57,7 +57,7 @@ def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_dam
 
     if current_armor_type == 'b':
         current_adv_state -= 1
-        roll_details.append("Info: Armadura 'b' aplica Desvantagem.")
+        roll_details.append("Info: Armor 'b' applies Disadvantage.")
 
     primary_roll, primary_detail = roll_primary_die(die_sides, current_adv_state)
     roll_details.append(primary_detail)
@@ -68,7 +68,7 @@ def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_dam
     total_dice_damage = 0
     if num_dice > 1:
         non_primary_rolls = [random.randint(1, die_sides) for _ in range(num_dice - 1)]
-        roll_details.append(f"Secundários: {non_primary_rolls}")
+        roll_details.append(f"Secondary: {non_primary_rolls}")
         total_dice_damage += sum(non_primary_rolls)
 
     total_dice_damage += primary_roll
@@ -77,13 +77,13 @@ def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_dam
 
     if is_crit:
         if crit_rule == 'e':
-            status = "Crit (Épico)"
-            roll_details.append("Info: Crítico Épico! Armadura ignorada.")
+            status = "Crit (Epic)"
+            roll_details.append("Info: Epic Crit! Armor ignored.")
             current_armor_type = 's'
         elif crit_rule == 't':
-            status = "Crit (Tático)"
+            status = "Crit (Tactical)"
             new_armor = degrade_armor(current_armor_type)
-            roll_details.append(f"Info: Crítico Tático! Armadura {current_armor_type} -> {new_armor}")
+            roll_details.append(f"Info: Tactical Crit! Armor {current_armor_type} -> {new_armor}")
             current_armor_type = new_armor
 
         if is_vicious:
@@ -94,13 +94,13 @@ def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_dam
         current_explosion = primary_roll
         while current_explosion == die_sides:
             explode_roll = random.randint(1, die_sides)
-            roll_details.append(f"Explosão: [{explode_roll}]")
+            roll_details.append(f"Explosion: [{explode_roll}]")
             total_dice_damage += explode_roll
             current_explosion = explode_roll
 
             if crit_rule == 't' and current_explosion == die_sides:
                 new_armor = degrade_armor(current_armor_type)
-                roll_details.append(f"Info: Explosão Crítica! Armadura {current_armor_type} -> {new_armor}")
+                roll_details.append(f"Info: Critical Explosion! Armor {current_armor_type} -> {new_armor}")
                 current_armor_type = new_armor
 
     final_damage = 0
@@ -122,23 +122,23 @@ def simulate_synergia_roll(num_dice, die_sides, adv_state, is_vicious, bonus_dam
 
     if apply_halving:
         final_damage = math.floor(final_damage / 2)
-        roll_details.append(f"Info: Dano Reduzido pela Metade (Armadura {current_armor_type})")
+        roll_details.append(f"Info: Damage Halved (Armor {current_armor_type})")
 
     return final_damage, roll_details, status
 
 
-# --- FUNÇÕES DE ANÁLISE ---
+# --- ANALYSIS FUNCTIONS ---
 
 def analyze_roll_config(console, description, num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type,
                         crit_rule):
     """
-    (MODO AVULSO)
-    Executa uma análise completa com output formatado pela 'rich'.
+    (SINGLE MODE)
+    Executes a full analysis with output formatted by 'rich'.
     """
 
-    console.print(Panel(description, title="[bold cyan]Analisando Configuração[/bold cyan]", border_style="cyan"))
+    console.print(Panel(description, title="[bold cyan]Analyzing Configuration[/bold cyan]", border_style="cyan"))
 
-    # --- Parte 1: Cálculo Teórico de Probabilidade ---
+    # --- Part 1: Theoretical Probability Calculation ---
     Y = die_sides
     prob_miss = 0.0
     prob_crit_first = 0.0
@@ -150,51 +150,51 @@ def analyze_roll_config(console, description, num_dice, die_sides, adv_state, is
     if calc_adv_state == 0:  # Normal
         prob_miss = 1 / Y
         prob_crit_first = 1 / Y
-    elif calc_adv_state > 0:  # Vantagem
+    elif calc_adv_state > 0:  # Advantage
         num_rolls = calc_adv_state + 1
         prob_miss = (1 / Y) ** num_rolls
         prob_crit_first = 1 - ((Y - 1) / Y) ** num_rolls
-    elif calc_adv_state < 0:  # Desvantagem
+    elif calc_adv_state < 0:  # Disadvantage
         num_rolls = abs(calc_adv_state) + 1
         prob_miss = 1 - ((Y - 1) / Y) ** num_rolls
         prob_crit_first = (1 / Y) ** num_rolls
 
     prob_text = Text()
-    prob_text.append(f"Estado de Vantagem (Final): {calc_adv_state}\n\n", style="default")
-    prob_text.append("Chance de Erro (Miss no 1): ", style="default")
+    prob_text.append(f"Advantage State (Final): {calc_adv_state}\n\n", style="default")
+    prob_text.append("Miss Chance (1 on roll): ", style="default")
     prob_text.append(f"{prob_miss * 100:.2f}%\n", style="bold red")
-    prob_text.append(f"Chance de Crítico (Acertar {Y}): ", style="bold green")
+    prob_text.append(f"Crit Chance (Hit {Y}): ", style="bold green")
     prob_text.append(f"{prob_crit_first * 100:.2f}%\n", style="bold green")
 
     prob_chain = prob_crit_first
     for i in range(2, 6):
         prob_chain *= (1 / Y)
-        prob_text.append(f"  Chance de Crítico de {i}ª ordem: ", style="dim")
+        prob_text.append(f"  {i}th order Crit Chance: ", style="dim")
         prob_text.append(f"{prob_chain * 100:.6f}%\n", style="dim italic")
 
-    console.print(Panel(prob_text, title="[bold green]Probabilidades Teóricas[/bold green]", border_style="green",
+    console.print(Panel(prob_text, title="[bold green]Theoretical Probabilities[/bold green]", border_style="green",
                         padding=(1, 2)))
 
-    # --- Parte 2: Simulação de Monte Carlo (COM SPINNER) ---
+    # --- Part 2: Monte Carlo Simulation (WITH SPINNER) ---
     total_damage_sum = 0
     avg_damage = 0
-    with console.status(f"[bold yellow]Rodando {N_SIMULATIONS_AVULSO:,} simulações...", spinner="dots8Bit") as status:
-        for _ in range(N_SIMULATIONS_AVULSO):
+    with console.status(f"[bold yellow]Running {N_SIMULATIONS_SINGLE:,} simulations...", spinner="dots8Bit") as status:
+        for _ in range(N_SIMULATIONS_SINGLE):
             damage, _, _ = simulate_synergia_roll(
                 num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule
             )
             total_damage_sum += damage
-        avg_damage = total_damage_sum / N_SIMULATIONS_AVULSO
+        avg_damage = total_damage_sum / N_SIMULATIONS_SINGLE
         time.sleep(0.5)
 
     sim_text = Text()
-    sim_text.append("Dano Médio Efetivo: ", style="default")
+    sim_text.append("Effective Average Damage: ", style="default")
     sim_text.append(f"{avg_damage:.3f}", style="bold yellow")
 
     console.print(
-        Panel(sim_text, title="[bold magenta]Simulação de Dano[/bold magenta]", border_style="magenta", padding=(1, 2)))
+        Panel(sim_text, title="[bold magenta]Damage Simulation[/bold magenta]", border_style="magenta", padding=(1, 2)))
 
-    # --- Parte 3: Rolagem de Exemplo Único ---
+    # --- Part 3: Single Example Roll ---
     ex_dmg, ex_rolls, ex_status = simulate_synergia_roll(
         num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule
     )
@@ -208,31 +208,31 @@ def analyze_roll_config(console, description, num_dice, die_sides, adv_state, is
     example_text = Text()
     example_text.append("Status: ", style="default")
     example_text.append(f"{ex_status}!\n", style=status_style)
-    example_text.append("Detalhes: ", style="dim")
+    example_text.append("Details: ", style="dim")
     example_text.append(f"{' | '.join(ex_rolls)}\n\n", style="dim")
-    example_text.append("Dano Final: ", style="default")
+    example_text.append("Final Damage: ", style="default")
     example_text.append(f"{ex_dmg}", style="bold white")
 
-    console.print(Panel(example_text, title="[bold blue]Rolagem de Exemplo Único[/bold blue]", border_style="blue",
+    console.print(Panel(example_text, title="[bold blue]Single Example Roll[/bold blue]", border_style="blue",
                         padding=(1, 2)))
     console.print("")
 
 
 def calculate_average_damage(num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule):
     """
-    (MODO CENÁRIO)
-    Função "Silenciosa" que apenas calcula e retorna o dano médio.
+    (SCENARIO MODE)
+    "Silent" function that only calculates and returns average damage.
     """
     total_damage_sum = 0
-    for _ in range(N_SIMULATIONS_CENARIO):
+    for _ in range(N_SIMULATIONS_SCENARIO):
         damage, _, _ = simulate_synergia_roll(
             num_dice, die_sides, adv_state, is_vicious, bonus_damage, armor_type, crit_rule
         )
         total_damage_sum += damage
-    return total_damage_sum / N_SIMULATIONS_CENARIO
+    return total_damage_sum / N_SIMULATIONS_SCENARIO
 
 
-# --- FUNÇÕES DE MENU E VALIDAÇÃO DE INPUT ---
+# --- MENU AND INPUT VALIDATION FUNCTIONS ---
 
 def parse_roll_input(console, roll_str):
     if roll_str.lower() in ['stop', EXIT_KEYWORD]:
@@ -242,8 +242,8 @@ def parse_roll_input(console, roll_str):
         if len(parts) != 2: return None, None
         num_dice = int(parts[0])
         die_sides = int(parts[1])
-        if num_dice <= 0 or die_sides not in DICE_TYPES + [20]:  # Permite d20 em avulso
-            console.print(f"[prompt.invalid]Dado 'd{die_sides}' não é um dado válido {DICE_TYPES}.")
+        if num_dice <= 0 or die_sides not in DICE_TYPES + [20]:  # Allows d20 in single mode
+            console.print(f"[prompt.invalid]Die 'd{die_sides}' is not a valid die {DICE_TYPES}.")
             return None, None
         return num_dice, die_sides
     except Exception:
@@ -252,7 +252,7 @@ def parse_roll_input(console, roll_str):
 
 def get_adv_state(console):
     choice = Prompt.ask(
-        "[bold cyan]Vantagem (v), Desvantagem (d) ou Normal (n)?[/]",
+        "[bold cyan]Advantage (v), Disadvantage (d) or Normal (n)?[/]",
         choices=["v", "d", "n", "stop", EXIT_KEYWORD],
         show_choices=False
     )
@@ -273,12 +273,12 @@ def get_yes_no_input(console, prompt):
 
 def get_bonus_input(console):
     while True:
-        val = console.input("[bold cyan]Qual o bônus de dano fixo (ex: 5, 0)?[/] ")
+        val = console.input("[bold cyan]What is the fixed damage bonus (e.g., 5, 0)?[/] ")
         if val.lower() in ['stop', EXIT_KEYWORD]: return EXIT_KEYWORD
         try:
             return int(val)
         except ValueError:
-            console.print("[prompt.invalid]Entrada inválida. Por favor, digite um número inteiro.")
+            console.print("[prompt.invalid]Invalid input. Please enter an integer.")
 
 
 def get_validated_input(console, prompt, valid_options):
@@ -293,65 +293,65 @@ def get_validated_input(console, prompt, valid_options):
 
 def get_max_dice_input(console):
     while True:
-        val = console.input("[bold cyan]Qual o número MÁXIMO de dados a testar (ex: 10)? [/] ")
+        val = console.input("[bold cyan]What is the MAXIMUM number of dice to test (e.g., 10)? [/] ")
         if val.lower() in ['stop', EXIT_KEYWORD]: return EXIT_KEYWORD
         try:
             max_dice = int(val)
-            if max_dice > 0 and max_dice <= 50:  # Limite de 50 para não demorar horas
+            if max_dice > 0 and max_dice <= 50:  # Limit of 50 to avoid long run times
                 return max_dice
             else:
-                console.print("[prompt.invalid]Por favor, digite um número entre 1 e 50.")
+                console.print("[prompt.invalid]Please enter a number between 1 and 50.")
         except ValueError:
-            console.print("[prompt.invalid]Entrada inválida. Por favor, digite um número inteiro.")
+            console.print("[prompt.invalid]Invalid input. Please enter an integer.")
 
 
-# --- MODOS DE EXECUÇÃO ---
+# --- EXECUTION MODES ---
 
 def run_avulso_mode(console):
-    """Roda o loop para testes individuais."""
+    """Runs the loop for individual tests."""
 
     console.print(Panel(
-        f"Modo de Testes Avulsos\nDigite '[bold red]{EXIT_KEYWORD}[/bold red]' ou '[bold red]stop[/bold red]' a qualquer momento para voltar ao menu principal.",
-        title="[bold]Modo Avulso[/bold]",
+        f"Single Test Mode\nType '[bold red]{EXIT_KEYWORD}[/bold red]' or '[bold red]stop[/bold red]' at any time to return to main menu.",
+        title="[bold]Single Mode[/bold]",
         padding=(1, 2),
         border_style="yellow"
     ))
 
     while True:
-        # 1. Obter a Rolagem
+        # 1. Get Roll
         num_dice, die_sides = None, None
         while num_dice is None:
-            roll_str = console.input("\n[bold cyan]Digite a rolagem (ex: 2d6, 1d12):[/] ").strip()
+            roll_str = console.input("\n[bold cyan]Enter roll (e.g., 2d6, 1d12):[/] ").strip()
             num_dice, die_sides = parse_roll_input(console, roll_str)
-            if num_dice == EXIT_KEYWORD: return  # Retorna ao menu main
+            if num_dice == EXIT_KEYWORD: return  # Returns to main menu
             if num_dice is None:
-                console.print("[prompt.invalid]Formato inválido. Use 'XdY'.")
+                console.print("[prompt.invalid]Invalid format. Use 'XdY'.")
 
-        # 2. Obter Vantagem/Desvantagem (Estado)
+        # 2. Get Advantage/Disadvantage (State)
         adv_state = get_adv_state(console)
         if adv_state == EXIT_KEYWORD: return
 
-        # 3. Obter Vicious
-        is_vicious = get_yes_no_input(console, "O ataque é 'Vicious'?")
+        # 3. Get Vicious
+        is_vicious = get_yes_no_input(console, "Is the attack 'Vicious'?")
         if is_vicious == EXIT_KEYWORD: return
 
-        # 4. Obter Bônus
+        # 4. Get Bonus
         bonus = get_bonus_input(console)
         if bonus == EXIT_KEYWORD: return
 
-        # 5. Obter Armadura
-        armor_type = get_validated_input(console, "Qual a armadura do alvo (s, m, p, b)?", ['s', 'm', 'p', 'b'])
+        # 5. Get Armor
+        armor_type = get_validated_input(console, "What is the target's armor (s, m, p, b)?", ['s', 'm', 'p', 'b'])
         if armor_type == EXIT_KEYWORD: return
 
-        # 6. Obter Regra de Crítico
-        crit_rule = get_validated_input(console, "Qual a regra de crítico (e - épico, t - tático)?", ['e', 't'])
+        # 6. Get Crit Rule
+        crit_rule = get_validated_input(console, "What is the crit rule (e - epic, t - tactical)?", ['e', 't'])
         if crit_rule == EXIT_KEYWORD: return
 
-        # 7. Montar a descrição e rodar a análise
+        # 7. Assemble description and run analysis
         desc = (
-            f"[bold]Rolagem:[/] {num_dice}d{die_sides} | [bold]Adv. Estado:[/] {adv_state} | "
-            f"[bold]Vicious:[/] {is_vicious} | [bold]Bônus:[/] +{bonus} | "
-            f"[bold]Armadura:[/] {armor_type.upper()} | [bold]Crítico:[/] {crit_rule.upper()}"
+            f"[bold]Roll:[/] {num_dice}d{die_sides} | [bold]Adv. State:[/] {adv_state} | "
+            f"[bold]Vicious:[/] {is_vicious} | [bold]Bonus:[/] +{bonus} | "
+            f"[bold]Armor:[/] {armor_type.upper()} | [bold]Crit:[/] {crit_rule.upper()}"
         )
 
         analyze_roll_config(
@@ -359,51 +359,51 @@ def run_avulso_mode(console):
             is_vicious, bonus, armor_type, crit_rule
         )
 
-        console.print("--- Próxima Análise Avulsa ---", justify="center")
+        console.print("--- Next Single Analysis ---", justify="center")
 
 
 def run_cenario_mode(console):
-    """Roda o modo de definição de cenário e geração de CSV."""
+    """Runs the scenario definition and CSV generation mode."""
 
     console.print(Panel(
-        f"Modo de Definição de Cenário\n"
-        f"Você definirá um cenário (armadura, bônus, etc.) e o programa irá calcular o dano médio para múltiplas rolagens (1dY até XdY).\n"
-        f"Digite '[bold red]{EXIT_KEYWORD}[/bold red]' ou '[bold red]stop[/bold red]' a qualquer momento para voltar ao menu principal.",
-        title="[bold]Modo Cenário[/bold]",
+        f"Scenario Definition Mode\n"
+        f"You will define a scenario (armor, bonus, etc.) and the program will calculate the average damage for multiple rolls (1dY to XdY).\n"
+        f"Type '[bold red]{EXIT_KEYWORD}[/bold red]' or '[bold red]stop[/bold red]' at any time to return to main menu.",
+        title="[bold]Scenario Mode[/bold]",
         padding=(1, 2),
         border_style="yellow"
     ))
 
-    # --- Coletar o Cenário ---
-    console.print("\n[bold]--- 1. Defina o Cenário ---[/bold]")
+    # --- Collect Scenario ---
+    console.print("\n[bold]--- 1. Define Scenario ---[/bold]")
     adv_state = get_adv_state(console)
     if adv_state == EXIT_KEYWORD: return
 
-    is_vicious = get_yes_no_input(console, "O cenário é 'Vicious'?")
+    is_vicious = get_yes_no_input(console, "Is the scenario 'Vicious'?")
     if is_vicious == EXIT_KEYWORD: return
 
     bonus = get_bonus_input(console)
     if bonus == EXIT_KEYWORD: return
 
-    armor_type = get_validated_input(console, "Qual a armadura do alvo (s, m, p, b)?", ['s', 'm', 'p', 'b'])
+    armor_type = get_validated_input(console, "What is the target's armor (s, m, p, b)?", ['s', 'm', 'p', 'b'])
     if armor_type == EXIT_KEYWORD: return
 
-    crit_rule = get_validated_input(console, "Qual a regra de crítico (e - épico, t - tático)?", ['e', 't'])
+    crit_rule = get_validated_input(console, "What is the crit rule (e - epic, t - tactical)?", ['e', 't'])
     if crit_rule == EXIT_KEYWORD: return
 
-    console.print("\n[bold]--- 2. Defina os Limites do Teste ---[/bold]")
+    console.print("\n[bold]--- 2. Define Test Limits ---[/bold]")
     max_dice = get_max_dice_input(console)
     if max_dice == EXIT_KEYWORD: return
 
     desc_cenario = (
-        f"Adv: {adv_state} | Vicious: {is_vicious} | Bônus: +{bonus} | "
-        f"Armadura: {armor_type.upper()} | Crítico: {crit_rule.upper()}"
+        f"Adv: {adv_state} | Vicious: {is_vicious} | Bonus: +{bonus} | "
+        f"Armor: {armor_type.upper()} | Crit: {crit_rule.upper()}"
     )
-    console.print(Panel(f"Cenário Definido: {desc_cenario}\nTestando de 1dY até {max_dice}dY.",
-                        title="[bold cyan]Sumário[/bold cyan]"))
+    console.print(Panel(f"Scenario Defined: {desc_cenario}\nTesting from 1dY to {max_dice}dY.",
+                        title="[bold cyan]Summary[/bold cyan]"))
 
-    # --- Processar o Lote ---
-    console.print(f"\n[bold]--- 3. Processando {max_dice * len(DICE_TYPES)} combinações ---[/bold]")
+    # --- Process Batch ---
+    console.print(f"\n[bold]--- 3. Processing {max_dice * len(DICE_TYPES)} combinations ---[/bold]")
 
     csv_data = []
     header = ["Dice Count"] + [f"d{y}" for y in DICE_TYPES]
@@ -421,11 +421,11 @@ def run_cenario_mode(console):
     )
 
     with progress_bar as progress:
-        task = progress.add_task("[green]Calculando Danos...", total=total_steps)
+        task = progress.add_task("[green]Calculating Damage...", total=total_steps)
 
-        for i in range(1, max_dice + 1):  # Linhas (1d, 2d, ... Xd)
+        for i in range(1, max_dice + 1):  # Rows (1d, 2d, ... Xd)
             current_row = [f"{i}d"]
-            for y in DICE_TYPES:  # Colunas (d4, d6, ...)
+            for y in DICE_TYPES:  # Columns (d4, d6, ...)
                 avg_dmg = calculate_average_damage(
                     num_dice=i,
                     die_sides=y,

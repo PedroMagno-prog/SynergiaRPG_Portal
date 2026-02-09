@@ -2,127 +2,127 @@ import math
 import csv
 import time
 
-def validar_todas_as_builds():
+def validate_all_builds():
     """
-    Testa todas as combinações de Dano, Alcance e Área
-    para encontrar builds válidas dentro do orçamento de PC.
+    Tests all combinations of Damage, Range, and Area
+    to find valid builds within the PC (Creation Points) budget.
     """
-    print("Iniciando validação de todas as builds...")
+    print("Starting validation of all builds...")
     start_time = time.time()
 
-    # --- Constantes do Sistema ---
+    # --- System Constants ---
     MAX_PC_BUDGET = 60
     MAX_ALCANCE = 20
     MAX_AREA = 36
 
-    # Máximo de dados 'X' a testar.
-    # Se (X*4)/2 = 60 (dano de d4), X = 30.
-    # Usaremos 30 como um teto seguro.
-    MAX_DADOS_X = 30
+    # Maximum 'X' dice to test.
+    # If (X*4)/2 = 60 (d4 damage), X = 30.
+    # Using 30 as a safe ceiling.
+    MAX_DICE_X = 30
 
-    TIPOS_DADO_Y = [4, 6, 8, 10, 12]  # d4, d6, d8, d10, d12
+    DIE_TYPES_Y = [4, 6, 8, 10, 12]  # d4, d6, d8, d10, d12
     # -----------------------------
 
     valid_builds = []
-    iteracoes_totais = 0
+    total_iterations = 0
 
-    # 4 loops aninhados para testar todas as combinações
-    for y_dado in TIPOS_DADO_Y:
-        for x_dados in range(1, MAX_DADOS_X + 1):
-            for al_alcance in range(0, MAX_ALCANCE + 1):
-                for ar_area in range(0, MAX_AREA + 1):
+    # 4 nested loops to test all combinations
+    for y_die in DIE_TYPES_Y:
+        for x_dice in range(1, MAX_DICE_X + 1):
+            for range_val in range(0, MAX_ALCANCE + 1):
+                for area_val in range(0, MAX_AREA + 1):
 
-                    iteracoes_totais += 1
+                    total_iterations += 1
 
-                    # --- Cálculo de Custo (Suas Fórmulas) ---
-                    custo_dano = (x_dados * y_dado) / 2
-                    custo_alcance = math.ceil(al_alcance / 2)
-                    custo_area = ar_area
+                    # --- Cost Calculation (Your Formulas) ---
+                    damage_cost = (x_dice * y_die) / 2
+                    range_cost = math.ceil(range_val / 2)
+                    area_cost = area_val
 
-                    custo_total_pc = custo_dano + custo_alcance + custo_area
+                    total_pc_cost = damage_cost + range_cost + area_cost
 
-                    # --- Validação ---
-                    if custo_total_pc <= MAX_PC_BUDGET:
-                        # Calcula a média de dano para análise
-                        # Média de 1 dado Y = (Y + 1) / 2
-                        dano_medio_calculado = x_dados * ((y_dado + 1) / 2)
+                    # --- Validation ---
+                    if total_pc_cost <= MAX_PC_BUDGET:
+                        # Calculates average damage for analysis
+                        # Average of 1 die Y = (Y + 1) / 2
+                        calculated_avg_damage = x_dice * ((y_die + 1) / 2)
 
                         build_info = {
-                            "Descricao_Dano": f"{x_dados}d{y_dado}",
-                            "Alcance_Blocos": al_alcance,
-                            "Area_Blocos": ar_area,
-                            "Custo_Total_PC": custo_total_pc,
-                            "Dano_Medio": round(dano_medio_calculado, 2),
-                            "Custo_Dano": custo_dano,
-                            "Custo_Alcance": custo_alcance,
-                            "Custo_Area": custo_area
+                            "Damage_Description": f"{x_dice}d{y_die}",
+                            "Range_Blocks": range_val,
+                            "Area_Blocks": area_val,
+                            "Total_PC_Cost": total_pc_cost,
+                            "Avg_Damage": round(calculated_avg_damage, 2),
+                            "Damage_Cost": damage_cost,
+                            "Range_Cost": range_cost,
+                            "Area_Cost": area_cost
                         }
                         valid_builds.append(build_info)
 
     end_time = time.time()
-    print(f"Validação concluída em {end_time - start_time:.2f} segundos.")
-    print(f"Total de {iteracoes_totais:,} combinações testadas.")
+    print(f"Validation completed in {end_time - start_time:.2f} seconds.")
+    print(f"Total of {total_iterations:,} combinations tested.")
 
-    # --- Análise e Geração de Relatório ---
+    # --- Analysis and Report Generation ---
     if not valid_builds:
-        print("Nenhuma build válida foi encontrada com os parâmetros fornecidos.")
+        print("No valid build found with the provided parameters.")
         return
 
-    print(f"Total de {len(valid_builds):,} builds válidas (<= {MAX_PC_BUDGET} PC) encontradas.")
+    print(f"Total of {len(valid_builds):,} valid builds (<= {MAX_PC_BUDGET} PC) found.")
 
-    # Salvar em CSV
-    output_filename = "validacao_builds_de_poder.csv"
+    # Save to CSV
+    output_filename = "power_builds_validation.csv"
     try:
         with open(output_filename, 'w', newline='', encoding='utf-8') as f:
-            # Pega as chaves do primeiro dicionário para usar como cabeçalho
+            # Gets keys from first dictionary to use as header
             fieldnames = valid_builds[0].keys()
             writer = csv.DictWriter(f, fieldnames=fieldnames)
 
             writer.writeheader()
             writer.writerows(valid_builds)
 
-        print(f"\n[SUCESSO] Todas as builds válidas foram salvas em '{output_filename}'")
+        print(f"\n[SUCCESS] All valid builds were saved in '{output_filename}'")
 
     except Exception as e:
-        print(f"\n[ERRO] Não foi possível salvar o arquivo CSV: {e}")
+        print(f"\n[ERROR] Could not save CSV file: {e}")
 
-    # --- Análise Rápida (Insights) ---
-    print("\n--- Análise Rápida das Builds ---")
+    # --- Quick Analysis (Insights) ---
+    print("\n--- Quick Builds Analysis ---")
 
-    # Encontrar a build com o maior Dano Médio possível (o "Canhão de Vidro")
-    build_max_dano_geral = max(valid_builds, key=lambda b: b["Dano_Medio"])
-    print(f"🥇 Build com Maior Dano Médio (Geral):")
-    print(f"   {build_max_dano_geral['Descricao_Dano']} (Média: {build_max_dano_geral['Dano_Medio']})")
-    print(f"   Alcance: {build_max_dano_geral['Alcance_Blocos']}, Área: {build_max_dano_geral['Area_Blocos']}")
-    print(f"   Custo: {build_max_dano_geral['Custo_Total_PC']} PC")
+    # Find build with highest possible Average Damage (the "Glass Cannon")
+    build_max_damage_general = max(valid_builds, key=lambda b: b["Avg_Damage"])
+    print(f"🥇 Build with Highest Avg Damage (General):")
+    print(f"   {build_max_damage_general['Damage_Description']} (Avg: {build_max_damage_general['Avg_Damage']})")
+    print(f"   Range: {build_max_damage_general['Range_Blocks']}, Area: {build_max_damage_general['Area_Blocks']}")
+    print(f"   Cost: {build_max_damage_general['Total_PC_Cost']} PC")
 
-    # Encontrar builds que custam exatamente 60 PC
-    builds_nivel_maximo = [b for b in valid_builds if b["Custo_Total_PC"] == MAX_PC_BUDGET]
+    # Find builds that cost exactly 60 PC
+    builds_max_level = [b for b in valid_builds if b["Total_PC_Cost"] == MAX_PC_BUDGET]
 
-    if builds_nivel_maximo:
-        print(f"\nEncontradas {len(builds_nivel_maximo)} builds de 'nível máximo' (exatos 60 PC).")
+    if builds_max_level:
+        print(f"\nFound {len(builds_max_level)} 'max level' builds (exactly 60 PC).")
 
-        # Encontrar a build de 60 PC com maior dano
-        build_max_dano_60pc = max(builds_nivel_maximo, key=lambda b: b["Dano_Medio"])
-        print(f"🎯 Build de Maior Dano (custando exatos 60 PC):")
-        print(f"   {build_max_dano_60pc['Descricao_Dano']} (Média: {build_max_dano_60pc['Dano_Medio']})")
-        print(f"   Alcance: {build_max_dano_60pc['Alcance_Blocos']}, Área: {build_max_dano_60pc['Area_Blocos']}")
+        # Find 60 PC build with highest damage
+        build_max_damage_60pc = max(builds_max_level, key=lambda b: b["Avg_Damage"])
+        print(f"🎯 Highest Damage Build (costing exactly 60 PC):")
+        print(f"   {build_max_damage_60pc['Damage_Description']} (Avg: {build_max_damage_60pc['Avg_Damage']})")
+        print(f"   Range: {build_max_damage_60pc['Range_Blocks']}, Area: {build_max_damage_60pc['Area_Blocks']}")
 
-        # Encontrar a build de 60 PC com maior alcance
-        build_max_alcance_60pc = max(builds_nivel_maximo, key=lambda b: b["Alcance_Blocos"])
-        print(f"🔭 Build de Maior Alcance (custando exatos 60 PC):")
-        print(f"   {build_max_alcance_60pc['Descricao_Dano']} (Média: {build_max_alcance_60pc['Dano_Medio']})")
-        print(f"   Alcance: {build_max_alcance_60pc['Alcance_Blocos']}, Área: {build_max_alcance_60pc['Area_Blocos']}")
+        # Find 60 PC build with highest range
+        build_max_range_60pc = max(builds_max_level, key=lambda b: b["Range_Blocks"])
+        print(f"🔭 Highest Range Build (costing exactly 60 PC):")
+        print(f"   {build_max_range_60pc['Damage_Description']} (Avg: {build_max_range_60pc['Avg_Damage']})")
+        print(f"   Range: {build_max_range_60pc['Range_Blocks']}, Area: {build_max_range_60pc['Area_Blocks']}")
 
-        # Encontrar a build de 60 PC com maior área
-        build_max_area_60pc = max(builds_nivel_maximo, key=lambda b: b["Area_Blocos"])
-        print(f"💥 Build de Maior Área (custando exatos 60 PC):")
-        print(f"   {build_max_area_60pc['Descricao_Dano']} (Média: {build_max_area_60pc['Dano_Medio']})")
-        print(f"   Alcance: {build_max_area_60pc['Alcance_Blocos']}, Área: {build_max_area_60pc['Area_Blocos']}")
+        # Find 60 PC build with highest area
+        build_max_area_60pc = max(builds_max_level, key=lambda b: b["Area_Blocks"])
+        print(f"💥 Highest Area Build (costing exactly 60 PC):")
+        print(f"   {build_max_area_60pc['Damage_Description']} (Avg: {build_max_area_60pc['Avg_Damage']})")
+        print(f"   Range: {build_max_area_60pc['Range_Blocks']}, Area: {build_max_area_60pc['Area_Blocks']}")
     else:
-        print("\nNenhuma build encontrada que custe exatamente 60 PC.")
+        print("\nNo build found that costs exactly 60 PC.")
 
 
-# --- Para Rodar o Script ---
+# --- To Run the Script ---
 if __name__ == "__main__":
-    validar_todas_as_builds()
+    validate_all_builds()
