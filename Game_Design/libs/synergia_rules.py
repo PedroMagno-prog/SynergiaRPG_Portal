@@ -10,27 +10,27 @@ class DiceEngine:
     """
 
     @staticmethod
-    def roll_XdY(qtd_dados, lados):
+    def roll_XdY(num_die, sides):
         """Rolls X dice with Y sides and returns the list of results."""
-        return [random.randint(1, lados) for _ in range(qtd_dados)]
+        return [random.randint(1, sides) for _ in range(num_die)]
 
     @staticmethod
-    def roll_XdY_drop_lowest(qtd_dados, lados, drop_n=1):
+    def roll_XdY_drop_lowest(num_die, sides, drop_n=1):
         """Rolls X dice, drops the N lowest."""
-        rolls = sorted(DiceEngine.roll_XdY(qtd_dados, lados))
+        rolls = sorted(DiceEngine.roll_XdY(num_die, sides))
         return rolls[drop_n:]
 
     @staticmethod
-    def roll_XdY_explode(qtd_dados, lados, threshold):
+    def roll_XdY_explode(num_die, sides, threshold):
         """Rolls X dice, exploding results >= threshold."""
-        results = DiceEngine.roll_XdY(qtd_dados, lados)
+        results = DiceEngine.roll_XdY(num_die, sides)
         final_sum = sum(results)
 
         # Recursive explosion logic (simplified for sum)
         if results and results[0] >= threshold:
             # Note: Did the original logic explode only the first die or all?
             # Assuming standard recursive explosion behavior
-            final_sum += DiceEngine.roll_XdY_explode(qtd_dados, lados, threshold)
+            final_sum += DiceEngine.roll_XdY_explode(num_die, sides, threshold)
 
         return final_sum
 
@@ -159,12 +159,12 @@ class PowerEconomy:
     MAX_PC_BUDGET = 60  # System constant
 
     @staticmethod
-    def calculate_cost(qtd_dados, tipo_dado, alcance, area):
+    def calculate_cost(num_die, tipo_dado, alcance, area):
         """
         Calculates the Creation Points (PC) cost of an ability.
         Formula: (X*Y)/2 + Range/2 + Area
         """
-        custo_dano = (qtd_dados * tipo_dado) / 2
+        custo_dano = (num_die * tipo_dado) / 2
         custo_alcance = math.ceil(alcance / 2)
         custo_area = area
 
@@ -179,6 +179,6 @@ class PowerEconomy:
         }
 
     @staticmethod
-    def estimate_avg_damage(qtd_dados, tipo_dado):
+    def estimate_avg_damage(num_die, tipo_dado):
         """Returns the statistical average damage (excluding crits/misses)."""
-        return qtd_dados * ((tipo_dado + 1) / 2)
+        return num_die * ((tipo_dado + 1) / 2)
